@@ -1,11 +1,30 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
-export default function () {
-  let xml = `<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-    <soap:Body><Test>QA</Test></soap:Body>
-  </soap:Envelope>`;
+const BASE_URL = 'http://backend:5000';
+
+export function soapTest() {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <TestRequest>
+      <Message>QA Test Message</Message>
+      <Timestamp>${new Date().toISOString()}</Timestamp>
+    </TestRequest>
+  </soap:Body>
+</soap:Envelope>`;
   
-  let res = http.post('http://host.docker.internal:5000/soap', xml, { headers: { 'Content-Type': 'text/xml' } });
-  check(res, { 'SOAP 200': r => r.status === 200 });
+  const res = http.post(`${BASE_URL}/soap`, xml, {
+    headers: { 'Content-Type': 'text/xml; charset=utf-8' }
+  });
+  
+  check(res, {
+    'SOAP 200': r => r.status === 200,
+    'SOAP response contains Status': r => r.body.includes('Status'),
+    'SOAP response contains Success': r => r.body.includes('Success')
+  });
+}
+
+export default function () {
+  soapTest();
 }

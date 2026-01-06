@@ -1,6 +1,17 @@
 version: '3.8'
 
 services:
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "5000:5000"
+    networks:
+      - k6-net
+    volumes:
+      - ./backend:/app
+    command: node app.js
+
   influxdb:
     image: influxdb:2.6
     container_name: influxdb
@@ -12,6 +23,7 @@ services:
       - DOCKER_INFLUXDB_INIT_PASSWORD=admin123
       - DOCKER_INFLUXDB_INIT_ORG=qaorg
       - DOCKER_INFLUXDB_INIT_BUCKET=k6
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
     volumes:
       - influxdb-data:/var/lib/influxdb2
     networks:
@@ -24,6 +36,9 @@ services:
       - influxdb
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
     networks:
       - k6-net
 
@@ -31,6 +46,7 @@ services:
     image: loadimpact/k6:latest
     container_name: k6
     depends_on:
+      - backend
       - influxdb
     volumes:
       - ./k6-scripts:/scripts
@@ -42,4 +58,4 @@ volumes:
 
 networks:
   k6-net:
-    external: true
+    driver: bridge

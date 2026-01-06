@@ -1,5 +1,8 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { restTest } from './rest.js';
+import { soapTest } from './soap.js';
+import { formTest } from './form.js';
 
 export let options = {
   vus: 1,
@@ -7,6 +10,16 @@ export let options = {
 };
 
 export default function () {
-  let res = http.get('http://host.docker.internal:5000/');
-  check(res, { 'status 200': (r) => r.status === 200 });
+  // Health check
+  let res = http.get('http://backend:5000/');
+  check(res, { 'Health check 200': (r) => r.status === 200 });
+
+  // REST API test
+  restTest();
+
+  // SOAP API test
+  soapTest();
+
+  // Form submission test
+  formTest();
 }

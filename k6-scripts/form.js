@@ -1,7 +1,25 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
+const BASE_URL = 'http://backend:5000';
+
+export function formTest() {
+  const formData = {
+    name: `QA User ${Math.random().toString(36).substring(7)}`,
+    email: `qa${Math.random().toString(36).substring(7)}@example.com`,
+    message: `Test message from k6 at ${new Date().toISOString()}`
+  };
+
+  const res = http.post(`${BASE_URL}/form`, formData, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  });
+
+  check(res, {
+    'Form submission OK': r => r.status === 200,
+    'Form response contains name': r => r.body.includes(formData.name)
+  });
+}
+
 export default function () {
-  let res = http.post('http://host.docker.internal:5000/form', { name: 'QA User', email: 'qa@example.com' });
-  check(res, { 'Form submission OK': r => r.status === 200 });
+  formTest();
 }

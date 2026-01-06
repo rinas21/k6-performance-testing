@@ -1,16 +1,35 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
-export default function () {
-  let res = http.get('http://host.docker.internal:5000/api/items');
+const BASE_URL = 'http://backend:5000';
+
+export function restTest() {
+  // GET - Read all items
+  let res = http.get(`${BASE_URL}/api/items`);
   check(res, { 'GET 200': r => r.status === 200 });
 
-  res = http.post('http://host.docker.internal:5000/api/items', JSON.stringify({ name: 'item1' }), { headers: { 'Content-Type': 'application/json' } });
+  // POST - Create item
+  res = http.post(`${BASE_URL}/api/items`, JSON.stringify({ name: 'k6-item', value: Math.random() }), {
+    headers: { 'Content-Type': 'application/json' }
+  });
   check(res, { 'POST 200': r => r.status === 200 });
+  const itemId = res.json('id');
 
-  res = http.put('http://host.docker.internal:5000/api/items/0', JSON.stringify({ name: 'updated' }), { headers: { 'Content-Type': 'application/json' } });
-  check(res, { 'PUT 200': r => r.status === 200 });
+  // PUT - Update item
+  if (itemId !== undefined) {
+    res = http.put(`${BASE_URL}/api/items/${itemId}`, JSON.stringify({ name: 'updated-item', value: Math.random() }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    check(res, { 'PUT 200': r => r.status === 200 });
+  }
 
-  res = http.del('http://host.docker.internal:5000/api/items/0');
-  check(res, { 'DELETE 200': r => r.status === 200 });
+  // DELETE - Delete item
+  if (itemId !== undefined) {
+    res = http.del(`${BASE_URL}/api/items/${itemId}`);
+    check(res, { 'DELETE 200': r => r.status === 200 });
+  }
+}
+
+export default function () {
+  restTest();
 }
