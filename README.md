@@ -2,7 +2,7 @@
 
 ## Quick Start
 
-Start all services:
+Start Docker services (Grafana and InfluxDB):
 ```
 docker-compose up -d
 ```
@@ -12,22 +12,22 @@ Wait 10 seconds for services to start, then verify:
 docker-compose ps
 ```
 
-All services should show "Up" status.
+Start the backend application locally:
+```
+cd backend
+npm install
+npm run dev
+```
+
+The backend will run on http://localhost:5000
 
 ## Access Points
 
-Backend API: http://localhost:5000
+Backend API: http://localhost:5000 (runs locally)
 Form UI: http://localhost:5000/form
+Login Page: http://localhost:5000/login
 Grafana: http://localhost:3000 (admin/admin123)
 InfluxDB: http://localhost:8086 (admin/admin123)
-
-## Get InfluxDB Token
-
-1. Open http://localhost:8086
-2. Login with admin/admin123
-3. Go to Load Data > API Tokens
-4. Copy the admin token (or create a new token)
-5. Use this token in k6 commands below
 
 ## Setup Grafana
 
@@ -37,66 +37,68 @@ InfluxDB: http://localhost:8086 (admin/admin123)
 4. Click Add data source
 5. Select InfluxDB
 6. Set URL to http://influxdb:8086
-7. Set Organization to qaorg
-8. Set Token (get from InfluxDB UI as above)
-9. Set Bucket to k6
+7. Set Database to k6
+8. Set User to admin
+9. Set Password to admin123
 10. Click Save & Test
 
 ## Run k6 Tests
 
-Replace TOKEN with your InfluxDB token from above.
+Use the `./k6` wrapper script to run k6 commands like a local CLI.
 
-Run REST API test:
+Run REST API test with InfluxDB output:
 ```
-docker exec -it k6 k6 run --out influxdb=http://influxdb:8086/k6?org=qaorg&token=TOKEN /scripts/rest.js
-```
-
-Run SOAP API test:
-```
-docker exec -it k6 k6 run --out influxdb=http://influxdb:8086/k6?org=qaorg&token=TOKEN /scripts/soap.js
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/rest.js
 ```
 
-Run Form submission test:
+Run SOAP API test with InfluxDB output:
 ```
-docker exec -it k6 k6 run --out influxdb=http://influxdb:8086/k6?org=qaorg&token=TOKEN /scripts/form.js
-```
-
-Run Smoke test (1 user, 30 seconds):
-```
-docker exec -it k6 k6 run --out influxdb=http://influxdb:8086/k6?org=qaorg&token=TOKEN /scripts/smoke.js
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/soap.js
 ```
 
-Run Load test (5 users, 1 minute):
+Run Form submission test with InfluxDB output:
 ```
-docker exec -it k6 k6 run --out influxdb=http://influxdb:8086/k6?org=qaorg&token=TOKEN /scripts/load.js
-```
-
-Run Stress test (ramp up to 10 users):
-```
-docker exec -it k6 k6 run --out influxdb=http://influxdb:8086/k6?org=qaorg&token=TOKEN /scripts/stress.js
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/form.js
 ```
 
-Run Spike test (sudden load spike):
+Run Login test with InfluxDB output:
 ```
-docker exec -it k6 k6 run --out influxdb=http://influxdb:8086/k6?org=qaorg&token=TOKEN /scripts/spike.js
-```
-
-Run Soak test (3 users, 2 minutes):
-```
-docker exec -it k6 k6 run --out influxdb=http://influxdb:8086/k6?org=qaorg&token=TOKEN /scripts/soak.js
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/login.js
 ```
 
-Note: You can run tests without InfluxDB output by removing the --out flag:
+Run Smoke test (1 user, 30 seconds) with InfluxDB output:
 ```
-docker exec -it k6 k6 run /scripts/rest.js
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/smoke.js
+```
+
+Run Load test (5 users, 1 minute) with InfluxDB output:
+```
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/load.js
+```
+
+Run Stress test (ramp up to 10 users) with InfluxDB output:
+```
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/stress.js
+```
+
+Run Spike test (sudden load spike) with InfluxDB output:
+```
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/spike.js
+```
+
+Run Soak test (3 users, 2 minutes) with InfluxDB output:
+```
+./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/soak.js
+```
+
+Run without InfluxDB output:
+```
+./k6 run /scripts/rest.js
 ```
 
 ## View Backend Logs
 
-Watch all requests:
-```
-docker logs -f backend
-```
+Backend logs appear in the terminal where you ran `npm run dev`. All requests are logged with timestamps and request details.
 
 ## Stop Services
 
@@ -113,22 +115,33 @@ docker-compose down -v
 ## QA Verification Checklist
 
 ### REST CRUD Operations
+- [ ] Start backend: cd backend && npm run dev
 - [ ] Open http://localhost:5000/api/items in browser (should return empty array)
-- [ ] Run: docker exec -it k6 k6 run /scripts/rest.js
-- [ ] Check backend logs: docker logs backend (should show GET, POST, PUT, DELETE requests)
+- [ ] Run: ./k6 run /scripts/rest.js
+- [ ] Check backend logs in terminal (should show GET, POST, PUT, DELETE requests)
 - [ ] Open http://localhost:5000/api/items again (should show created items)
 
 ### Form Submissions
 - [ ] Open http://localhost:5000/form in browser
 - [ ] Fill form with name, email, message and submit
 - [ ] Verify success message appears
-- [ ] Check backend logs: docker logs backend (should show POST /form with form data)
-- [ ] Run: docker exec -it k6 k6 run /scripts/form.js
+- [ ] Check backend logs in terminal (should show POST /form with form data)
+- [ ] Run: ./k6 run /scripts/form.js
 - [ ] Check backend logs again (should show more form submissions)
 
+### Login Validation
+- [ ] Open http://localhost:5000/login in browser
+- [ ] Try valid credentials: admin/admin123 (should succeed)
+- [ ] Try invalid credentials: wrong/wrong (should fail)
+- [ ] Verify validation: try username < 3 chars (should show error)
+- [ ] Verify validation: try password < 3 chars (should show error)
+- [ ] Check backend logs in terminal (should show login attempts)
+- [ ] Run: ./k6 run /scripts/login.js
+- [ ] Check backend logs again (should show more login attempts)
+
 ### SOAP Requests
-- [ ] Run: docker exec -it k6 k6 run /scripts/soap.js
-- [ ] Check backend logs: docker logs backend (should show POST /soap with XML body)
+- [ ] Run: ./k6 run /scripts/soap.js
+- [ ] Check backend logs in terminal (should show POST /soap with XML body)
 - [ ] Verify response contains SOAP envelope with Success status
 
 ### k6 Test Runs
@@ -140,10 +153,10 @@ docker-compose down -v
 
 ### Grafana Dashboards
 - [ ] Login to Grafana at http://localhost:3000
-- [ ] Verify InfluxDB data source is connected
-- [ ] Go to Explore and select k6 bucket
-- [ ] Run any k6 test with --out influxdb flag
-- [ ] In Grafana Explore, query for k6 metrics
+- [ ] Setup InfluxDB data source (see Setup Grafana section above)
+- [ ] Go to Explore and select InfluxDB data source
+- [ ] Run any k6 test with --out influxdb flag: ./k6 run --out influxdb=http://influxdb:8086/k6 /scripts/rest.js
+- [ ] In Grafana Explore, query: SELECT * FROM http_req_duration LIMIT 10
 - [ ] Verify you can see request rates, response times, and check results
 
 ## Manual API Testing

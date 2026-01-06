@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
-const BASE_URL = 'http://backend:5000';
+const BASE_URL = 'http://host.docker.internal:5000';
 
 export function soapTest() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
